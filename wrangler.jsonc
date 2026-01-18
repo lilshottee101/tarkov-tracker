@@ -1,0 +1,7 @@
+{
+  "name": "tarkov-tracker",
+  "compatibility_date": "2026-01-18",
+  "assets": {
+    "directory": "."
+  }
+}
