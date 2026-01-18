@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarkov Kappa Tracker - Compact</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e0f;
+            --bg-secondary: #151a1c;
+            --bg-card: #1a2124;
+            --border: #2a3338;
+            --border-light: #3a4348;
+            --accent-primary: #7d8a3c;
+            --accent-hover: #8f9d45;
+            --text-primary: #e8e9ea;
+            --text-secondary: #b0b5b8;
+            --text-muted: #6a7175;
+            --shadow: rgba(0, 0, 0, 0.5);
+            --success: #4a9d5f;
+            --kappa: #d4af37;
+            --lightkeeper: #4a7c9d;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Progress Bar at Top */
+        .progress-bar-container {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--border);
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .progress-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .progress-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        .progress-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            min-width: 200px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-hover));
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+            width: 200px;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .filter-btn, .export-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover, .export-btn:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* Spreadsheet Table */
+        .table-container {
+            padding: 0;
+            overflow-x: auto;
+            height: calc(100vh - 50px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-secondary);
+        }
+
+        th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            border-bottom: 2px solid var(--accent-primary);
+            border-right: 1px solid var(--border);
+            background: var(--bg-secondary);
+            white-space: nowrap;
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            background: var(--bg-card);
+        }
+
+        th.sorted-asc::after {
+            content: ' ▲';
+            color: var(--accent-primary);
+        }
+
+        th.sorted-desc::after {
+            content: ' ▼';
+            color: var(--accent-primary);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-card);
+        }
+
+        tbody tr.completed {
+            opacity: 0.5;
+            background: var(--bg-secondary);
+        }
+
+        tbody tr.completed:hover {
+            opacity: 0.7;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-right: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        td:last-child {
+            border-right: none;
+        }
+
+        /* Checkbox Column */
+        .checkbox-cell {
+            width: 40px;
+            text-align: center;
+            padding: 8px;
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            background: var(--bg-primary);
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+        }
+
+        .task-checkbox.checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 2px;
+            font-size: 14px;
+            color: var(--bg-primary);
+            font-weight: 900;
+        }
+
+        /* Trader Column */
+        .trader-cell {
+            width: 100px;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        /* Task Name Column */
+        .task-name-cell {
+            min-width: 250px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .task-name-cell:hover {
+            color: var(--accent-hover);
+        }
+
+        /* Level Column */
+        .level-cell {
+            width: 60px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        /* Prerequisites Column */
+        .prereq-cell {
+            width: 180px;
+            font-size: 0.75rem;
+        }
+
+        .prereq-item {
+            display: block;
+            padding: 2px 0;
+            color: var(--text-secondary);
+        }
+
+        .prereq-item.completed {
+            color: var(--success);
+            text-decoration: line-through;
+        }
+
+        .prereq-item.incomplete {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Map Column */
+        .map-cell {
+            width: 120px;
+            color: var(--text-secondary);
+        }
+
+        /* XP Column */
+        .xp-cell {
+            width: 80px;
+            text-align: right;
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        /* Objectives Column */
+        .objectives-cell {
+            min-width: 300px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .objective-item {
+            display: block;
+            padding: 2px 0;
+            border-left: 2px solid var(--accent-primary);
+            padding-left: 8px;
+            margin: 3px 0;
+        }
+
+        .objective-item.optional {
+            border-left-color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Items Column */
+        .items-cell {
+            min-width: 200px;
+            font-size: 0.75rem;
+        }
+
+        .item-tag {
+            display: inline-block;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 2px 6px;
+            margin: 2px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .item-tag.fir {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        /* Badges Column */
+        .badges-cell {
+            width: 100px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 2px;
+        }
+
+        .badge.kappa {
+            background: var(--kappa);
+            color: var(--bg-primary);
+        }
+
+        .badge.lightkeeper {
+            background: var(--lightkeeper);
+            color: var(--text-primary);
+        }
+
+        /* Wiki Link Column */
+        .wiki-cell {
+            width: 60px;
+            text-align: center;
+        }
+
+        .wiki-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 4px 8px;
+            border: 1px solid var(--accent-primary);
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .wiki-link:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        /* Loading & Error States */
+        #loading, #error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-primary);
+            font-size: 1rem;
+            z-index: 2000;
+        }
+
+        #error {
+            border-color: #d9534f;
+            color: #d9534f;
+            display: none;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border: 2px solid var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .objectives-cell,
+            .items-cell {
+                min-width: 150px;
+            }
+        }
+
+        /* Grid View Styles */
+        .grid-view {
+            display: none;
+            padding: 20px;
+            background: var(--bg-primary);
+        }
+
+        .grid-view.active {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .trader-grid-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 15px;
+        }
+
+        .trader-grid-header {
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-primary);
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        .trader-grid-stats {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .grid-task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .grid-task-item:last-child {
+            border-bottom: none;
+        }
+
+        .grid-task-item.completed {
+            opacity: 0.4;
+        }
+
+        .grid-task-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            background: var(--bg-primary);
+            cursor: pointer;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .grid-task-checkbox.checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .grid-task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: -2px;
+            left: 1px;
+            font-size: 12px;
+            color: var(--bg-primary);
+            font-weight: 900;
+        }
+
+        .grid-task-name {
+            flex: 1;
+            cursor: pointer;
+            word-break: break-word;
+        }
+
+        .grid-task-name:hover {
+            color: var(--accent-hover);
+        }
+
+        .grid-task-badges {
+            display: flex;
+            gap: 4px;
+        }
+
+        .grid-badge {
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            font-weight: 700;
+        }
+
+        .table-container.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar Header -->
+    <div class="progress-bar-container">
+        <div class="progress-info">
+            <div>
+                <span class="progress-label">Progress:</span>
+                <span class="progress-value" id="progressText">0 / 0</span>
+            </div>
+            <div>
+                <span class="progress-label">Kappa:</span>
+                <span class="progress-value" id="kappaProgress">0 / 0</span>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+
+        <div class="controls">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search tasks...">
+            <button class="filter-btn active" onclick="setFilter('all')">ALL</button>
+            <button class="filter-btn" onclick="setFilter('kappa')">KAPPA</button>
+            <button class="filter-btn" onclick="setFilter('incomplete')">TODO</button>
+            <button class="filter-btn" onclick="setFilter('kappa-todo')">KAPPA TODO</button>
+            <button class="export-btn" onclick="toggleView()">GRID</button>
+            <button class="export-btn" onclick="exportData()">EXPORT</button>
+            <button class="export-btn" onclick="importData()">IMPORT</button>
+        </div>
+    </div>
+
+    <!-- Spreadsheet Table -->
+    <div class="table-container" id="tableView">
+        <table id="taskTable">
+            <thead>
+                <tr>
+                    <th class="checkbox-cell">✓</th>
+                    <th class="trader-cell sortable" onclick="sortBy('trader')">TRADER</th>
+                    <th class="task-name-cell sortable" onclick="sortBy('name')">TASK NAME</th>
+                    <th class="level-cell sortable" onclick="sortBy('level')">LVL</th>
+                    <th class="prereq-cell">REQUIRES</th>
+                    <th class="map-cell">MAP</th>
+                    <th class="xp-cell sortable" onclick="sortBy('xp')">XP</th>
+                    <th class="objectives-cell">OBJECTIVES</th>
+                    <th class="items-cell">REQUIRED ITEMS</th>
+                    <th class="badges-cell">TAGS</th>
+                    <th class="wiki-cell">LINK</th>
+                </tr>
+            </thead>
+            <tbody id="taskTableBody">
+                <!-- Tasks will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Grid View -->
+    <div class="grid-view" id="gridView">
+        <!-- Grid sections will be populated here -->
+    </div>
+
+    <div id="loading">LOADING TASKS...</div>
+    <div id="error"></div>
+
+    <script>
+        const API_URL = 'https://api.tarkov.dev/graphql';
+        const STORAGE_KEY = 'tarkov_kappa_tracker_v2';
+
+        let allTasks = [];
+        let completedTasks = new Set();
+        let currentFilter = 'all';
+        let currentSort = { column: null, direction: 'asc' };
+        let currentView = 'table'; // 'table' or 'grid'
+
+        const query = `
+            query {
+                tasks {
+                    id
+                    name
+                    trader {
+                        name
+                    }
+                    map {
+                        name
+                    }
+                    minPlayerLevel
+                    experience
+                    wikiLink
+                    kappaRequired
+                    lightkeeperRequired
+                    taskRequirements {
+                        task {
+                            id
+                            name
+                        }
+                        status
+                    }
+                    objectives {
+                        id
+                        type
+                        description
+                        optional
+                        ... on TaskObjectiveItem {
+                            items {
+                                name
+                                shortName
+                            }
+                            count
+                            foundInRaid
+                        }
+                        ... on TaskObjectiveQuestItem {
+                            questItem {
+                                name
+                            }
+                            count
+                        }
+                        ... on TaskObjectiveMark {
+                            markerItem {
+                                name
+                            }
+                        }
+                    }
+                }
+            }
+        `;
+
+        async function fetchTasks() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+                
+                const result = await response.json();
+                
+                if (result.errors) {
+                    throw new Error(result.errors[0].message);
+                }
+                
+                allTasks = result.data.tasks;
+                loadProgress();
+                renderCurrentView();
+                updateProgress();
+                
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').textContent = `ERROR: ${error.message}`;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function renderTasks(searchTerm = '') {
+            const tbody = document.getElementById('taskTableBody');
+            let tasks = filterTasks(allTasks, searchTerm);
+            
+            // Apply sorting
+            if (currentSort.column) {
+                tasks = sortTasks(tasks, currentSort.column, currentSort.direction);
+            }
+            
+            tbody.innerHTML = tasks.map(task => {
+                const isCompleted = completedTasks.has(task.id);
+                const objectives = getObjectivesHtml(task.objectives || []);
+                const items = getItemsHtml(task.objectives || []);
+                const prerequisites = getPrerequisitesHtml(task.taskRequirements || []);
+                
+                return `
+                    <tr class="${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
+                        <td class="checkbox-cell">
+                            <div class="task-checkbox ${isCompleted ? 'checked' : ''}" 
+                                 onclick="toggleTask('${task.id}')"></div>
+                        </td>
+                        <td class="trader-cell">${task.trader.name}</td>
+                        <td class="task-name-cell" ondblclick="window.open('${task.wikiLink}', '_blank')">${task.name}</td>
+                        <td class="level-cell">${task.minPlayerLevel}</td>
+                        <td class="prereq-cell">${prerequisites}</td>
+                        <td class="map-cell">${task.map ? task.map.name : '-'}</td>
+                        <td class="xp-cell">${task.experience.toLocaleString()}</td>
+                        <td class="objectives-cell">${objectives}</td>
+                        <td class="items-cell">${items}</td>
+                        <td class="badges-cell">
+                            ${task.kappaRequired ? '<span class="badge kappa">K</span>' : ''}
+                            ${task.lightkeeperRequired ? '<span class="badge lightkeeper">LK</span>' : ''}
+                        </td>
+                        <td class="wiki-cell">
+                            <a href="${task.wikiLink}" target="_blank" class="wiki-link">WIKI</a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getPrerequisitesHtml(requirements) {
+            if (!requirements || requirements.length === 0) return '-';
+            
+            // Filter for 'complete' status requirements
+            const completeReqs = requirements.filter(req => 
+                req.status && req.status.includes('complete')
+            );
+            
+            if (completeReqs.length === 0) return '-';
+            
+            return completeReqs.map(req => {
+                const isCompleted = completedTasks.has(req.task.id);
+                const className = isCompleted ? 'completed' : 'incomplete';
+                return `<span class="prereq-item ${className}">${req.task.name}</span>`;
+            }).join('');
+        }
+
+        function getObjectivesHtml(objectives) {
+            if (!objectives || objectives.length === 0) return '-';
+            
+            return objectives.slice(0, 3).map(obj => {
+                const text = obj.description.length > 80 
+                    ? obj.description.substring(0, 80) + '...' 
+                    : obj.description;
+                return `<span class="objective-item ${obj.optional ? 'optional' : ''}">${text}</span>`;
+            }).join('');
+        }
+
+        function getItemsHtml(objectives) {
+            if (!objectives || objectives.length === 0) return '-';
+            
+            const items = [];
+            objectives.forEach(obj => {
+                if (obj.items && obj.items.length > 0) {
+                    obj.items.forEach(item => {
+                        const fir = obj.foundInRaid ? ' fir' : '';
+                        const count = obj.count > 1 ? ` x${obj.count}` : '';
+                        items.push(`<span class="item-tag${fir}">${item.shortName || item.name}${count}</span>`);
+                    });
+                }
+                if (obj.questItem) {
+                    const count = obj.count > 1 ? ` x${obj.count}` : '';
+                    items.push(`<span class="item-tag">${obj.questItem.name}${count}</span>`);
+                }
+                if (obj.markerItem) {
+                    items.push(`<span class="item-tag">${obj.markerItem.name}</span>`);
+                }
+            });
+            
+            return items.length > 0 ? items.slice(0, 5).join('') : '-';
+        }
+
+        function filterTasks(tasks, searchTerm) {
+            let filtered = tasks;
+            
+            // Apply current filter
+            if (currentFilter === 'kappa') {
+                filtered = filtered.filter(task => task.kappaRequired);
+            } else if (currentFilter === 'incomplete') {
+                filtered = filtered.filter(task => !completedTasks.has(task.id));
+            } else if (currentFilter === 'kappa-todo') {
+                // Show Kappa-required tasks that are NOT completed
+                filtered = filtered.filter(task => 
+                    task.kappaRequired && !completedTasks.has(task.id)
+                );
+            }
+            
+            // Apply search
+            if (searchTerm) {
+                const search = searchTerm.toLowerCase();
+                filtered = filtered.filter(task => 
+                    task.name.toLowerCase().includes(search) ||
+                    task.trader.name.toLowerCase().includes(search) ||
+                    (task.map && task.map.name.toLowerCase().includes(search))
+                );
+            }
+            
+            return filtered;
+        }
+
+        function sortBy(column) {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            updateSortHeaders();
+            renderTasks(document.getElementById('searchInput').value);
+        }
+
+        function updateSortHeaders() {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            
+            if (currentSort.column) {
+                const columnMap = {
+                    'trader': 1,
+                    'name': 2,
+                    'level': 3,
+                    'xp': 5
+                };
+                
+                const th = document.querySelectorAll('th')[columnMap[currentSort.column]];
+                th.classList.add(`sorted-${currentSort.direction}`);
+            }
+        }
+
+        function sortTasks(tasks, column, direction) {
+            const sorted = [...tasks];
+            
+            sorted.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case 'trader':
+                        aVal = a.trader.name;
+                        bVal = b.trader.name;
+                        break;
+                    case 'name':
+                        aVal = a.name;
+                        bVal = b.name;
+                        break;
+                    case 'level':
+                        aVal = a.minPlayerLevel;
+                        bVal = b.minPlayerLevel;
+                        break;
+                    case 'xp':
+                        aVal = a.experience;
+                        bVal = b.experience;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (typeof aVal === 'string') {
+                    return direction === 'asc' 
+                        ? aVal.localeCompare(bVal)
+                        : bVal.localeCompare(aVal);
+                } else {
+                    return direction === 'asc' 
+                        ? aVal - bVal
+                        : bVal - aVal;
+                }
+            });
+            
+            return sorted;
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            renderCurrentView();
+        }
+
+        function toggleTask(taskId) {
+            if (completedTasks.has(taskId)) {
+                completedTasks.delete(taskId);
+            } else {
+                completedTasks.add(taskId);
+            }
+            
+            saveProgress();
+            renderCurrentView();
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const total = allTasks.length;
+            const completed = completedTasks.size;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            const kappaTotal = allTasks.filter(t => t.kappaRequired).length;
+            const kappaCompleted = allTasks.filter(t => t.kappaRequired && completedTasks.has(t.id)).length;
+            
+            document.getElementById('progressText').textContent = `${completed} / ${total}`;
+            document.getElementById('kappaProgress').textContent = `${kappaCompleted} / ${kappaTotal}`;
+            document.getElementById('progressFill').style.width = `${percent}%`;
+        }
+
+        function saveProgress() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...completedTasks]));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                completedTasks = new Set(JSON.parse(saved));
+            }
+        }
+
+        function exportData() {
+            const data = {
+                version: 2,
+                completed: [...completedTasks],
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kappa-tracker-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        completedTasks = new Set(data.completed || []);
+                        saveProgress();
+                        renderCurrentView();
+                        updateProgress();
+                        alert('Data imported successfully!');
+                    } catch (error) {
+                        alert('Error importing data: ' + error.message);
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        function toggleView() {
+            currentView = currentView === 'table' ? 'grid' : 'table';
+            
+            const tableView = document.getElementById('tableView');
+            const gridView = document.getElementById('gridView');
+            const btn = event.target;
+            
+            if (currentView === 'grid') {
+                tableView.classList.add('hidden');
+                gridView.classList.add('active');
+                btn.textContent = 'TABLE';
+                renderGridView();
+            } else {
+                tableView.classList.remove('hidden');
+                gridView.classList.remove('active');
+                btn.textContent = 'GRID';
+            }
+        }
+
+        function renderCurrentView() {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (currentView === 'grid') {
+                renderGridView(searchTerm);
+            } else {
+                renderTasks(searchTerm);
+            }
+        }
+
+        function renderGridView(searchTerm = '') {
+            const gridView = document.getElementById('gridView');
+            let tasks = filterTasks(allTasks, searchTerm);
+            
+            // Group tasks by trader
+            const tasksByTrader = {};
+            tasks.forEach(task => {
+                const trader = task.trader.name;
+                if (!tasksByTrader[trader]) {
+                    tasksByTrader[trader] = [];
+                }
+                tasksByTrader[trader].push(task);
+            });
+            
+            // Render grid sections
+            gridView.innerHTML = Object.keys(tasksByTrader)
+                .sort()
+                .map(trader => {
+                    const traderTasks = tasksByTrader[trader];
+                    const totalTasks = traderTasks.length;
+                    const completedCount = traderTasks.filter(t => completedTasks.has(t.id)).length;
+                    
+                    return `
+                        <div class="trader-grid-section">
+                            <div class="trader-grid-header">
+                                ${trader}
+                                <div class="trader-grid-stats">${completedCount} / ${totalTasks} complete</div>
+                            </div>
+                            ${traderTasks.map(task => {
+                                const isCompleted = completedTasks.has(task.id);
+                                return `
+                                    <div class="grid-task-item ${isCompleted ? 'completed' : ''}">
+                                        <div class="grid-task-checkbox ${isCompleted ? 'checked' : ''}" 
+                                             onclick="toggleTask('${task.id}')"></div>
+                                        <div class="grid-task-name" ondblclick="window.open('${task.wikiLink}', '_blank')">
+                                            ${task.name}
+                                        </div>
+                                        <div class="grid-task-badges">
+                                            ${task.kappaRequired ? '<span class="badge kappa grid-badge">K</span>' : ''}
+                                            ${task.lightkeeperRequired ? '<span class="badge lightkeeper grid-badge">LK</span>' : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }).join('');
+        }
+
+        // Search handler
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderCurrentView();
+        });
+
+        // Initialize
+        fetchTasks();
+    </script>
+</body>
+</html>
