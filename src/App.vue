@@ -948,7 +948,7 @@ async function fetchPlayerData() {
 
   try {
     const response = await fetch(
-  `/player-api/profile/${playerAccountId.value}.json`
+  `${PLAYER_API_URL}/${playerAccountId.value}.json`
 )
     if (!response.ok) {
       throw new Error('Player not found')
